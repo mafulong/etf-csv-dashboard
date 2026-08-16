@@ -68,7 +68,7 @@
   }
 
   function loadSummary() {
-    return fetchText(CSV_BASE + '_summary.csv').then((txt) => {
+    return fetchText(CSV_BASE + 'summary.csv').then((txt) => {
       const lines = txt.split(/\r?\n/).filter((l) => l.length > 0);
       const header = lines[0].split(',').map((s) => s.trim());
       const out = [];
