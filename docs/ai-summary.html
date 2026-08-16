@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ETF Dashboard · AI 解读</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand"><span class="dot"></span> ETF Dashboard</div>
+    <nav>
+      <a href="index.html">首页</a>
+      <a href="dashboard.html">综合仪表盘</a>
+      <a href="momentum.html">动量轮动</a>
+      <a href="technical.html">技术分析</a>
+      <a href="ai-summary.html" class="active">AI 解读</a>
+      <a href="portfolio.html">组合诊断</a>
+    </nav>
+    <div class="meta" id="nav-meta">--</div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>AI 解读</h1>
+        <div class="subtitle">基于本地数据的规则引擎 · 无 LLM 调用 · 页面 reload 时立即计算</div>
+      </div>
+      <div class="row gap-8">
+        <span class="muted" id="last-updated">--</span>
+        <button class="btn primary" id="btn-refresh">重新计算</button>
+      </div>
+    </div>
+
+    <div id="ai-body" class="loading">加载数据并生成解读…</div>
+  </main>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/load.js"></script>
+  <script src="assets/js/ai.js"></script>
+  <script>
+    (() => {
+      const body = document.getElementById('ai-body');
+      const navMeta = document.getElementById('nav-meta');
+      const lastUpd = document.getElementById('last-updated');
+
+      async function render() {
+        body.className = 'loading';
+        body.textContent = '加载数据并生成解读…';
+        await ETF.ready;
+        navMeta.textContent = ETF.codes().length + ' 只 · ' + ETF.lastDate;
+        lastUpd.textContent = '数据日期 ' + ETF.lastDate;
+
+        const result = await ETF.ai.run();
+
+        body.classList.remove('loading');
+        body.innerHTML = '';
+
+        // Three column cards
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-3';
+
+        // Market summary card
+        const cardSummary = document.createElement('div');
+        cardSummary.className = 'card';
+        cardSummary.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">市场总结</div>
+            <span class="tag">A · 概述</span>
+          </div>
+          <div class="market-summary">${result.summary.replace(/\n\n/g, '<br><br>')}</div>
+        `;
+        grid.appendChild(cardSummary);
+
+        // Risk card
+        const cardRisk = document.createElement('div');
+        cardRisk.className = 'card';
+        const riskItems = result.risks.map((r) => `<li>${r.text}</li>`).join('');
+        cardRisk.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">风险提示</div>
+            <span class="tag">B · ${result.risks.length} 条</span>
+          </div>
+          <ul class="bullets risk">${riskItems}</ul>
+        `;
+        grid.appendChild(cardRisk);
+
+        // Action card
+        const cardAction = document.createElement('div');
+        cardAction.className = 'card';
+        const actItems = result.actions.map((r) => `<li>${r.text}</li>`).join('');
+        cardAction.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">操作建议</div>
+            <span class="tag">C · ${result.actions.length} 条</span>
+          </div>
+          <ul class="bullets action">${actItems}</ul>
+        `;
+        grid.appendChild(cardAction);
+
+        body.appendChild(grid);
+
+        // Categories strip
+        const catsTitle = document.createElement('div');
+        catsTitle.className = 'section-title';
+        catsTitle.textContent = '类别平均表现';
+        body.appendChild(catsTitle);
+        const cats = document.createElement('div');
+        cats.className = 'grid grid-4';
+        result.categories.forEach((c) => {
+          const m = document.createElement('div');
+          m.className = 'metric ' + ETF.utils.signClass(c.day);
+          m.innerHTML = `
+            <div class="label">${c.category} · ${c.count}</div>
+            <div class="value">${ETF.utils.pct(c.day)}</div>
+            <div class="sub">周 ${ETF.utils.pct(c.week)} · 月 ${ETF.utils.pct(c.month)}</div>
+          `;
+          cats.appendChild(m);
+        });
+        body.appendChild(cats);
+
+        // Top / Bottom 5
+        const tbTitle = document.createElement('div');
+        tbTitle.className = 'section-title';
+        tbTitle.textContent = '当日涨幅 Top 5 / Bottom 5';
+        body.appendChild(tbTitle);
+
+        function makeTable(title, rows, accent) {
+          const wrap = document.createElement('div');
+          wrap.className = 'card';
+          wrap.innerHTML = `
+            <div class="card-header">
+              <div class="card-title">${title}</div>
+              <span class="tag">${rows.length} 只</span>
+            </div>
+            <table class="tbl">
+              <thead><tr>
+                <th>代码</th><th>名称</th><th>类别</th>
+                <th class="num">当日</th>
+                <th class="num">近 1 周</th>
+                <th class="num">近 1 月</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          `;
+          const tbody = wrap.querySelector('tbody');
+          rows.forEach((x) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td class="mono">${x.code}</td>
+              <td>${x.name}</td>
+              <td><span class="pill cat-${x.category}">${x.category}</span></td>
+              <td class="num ${ETF.utils.signClass(x.day)}">${ETF.utils.pct(x.day)}</td>
+              <td class="num ${x.week != null ? ETF.utils.signClass(x.week) : ''}">${x.week != null ? ETF.utils.pct(x.week) : '--'}</td>
+              <td class="num ${x.month != null ? ETF.utils.signClass(x.month) : ''}">${x.month != null ? ETF.utils.pct(x.month) : '--'}</td>
+            `;
+            tbody.appendChild(tr);
+          });
+          return wrap;
+        }
+
+        const tbGrid = document.createElement('div');
+        tbGrid.className = 'grid grid-2';
+        tbGrid.appendChild(makeTable('Top 5 涨幅', result.top5, 'pos'));
+        tbGrid.appendChild(makeTable('Bottom 5 跌幅', result.bottom5, 'neg'));
+        body.appendChild(tbGrid);
+      }
+
+      document.getElementById('btn-refresh').addEventListener('click', async () => {
+        try { await ETF.refresh(); } catch (_) { /* offline ok */ }
+        render();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>

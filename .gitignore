@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# Logs
+extract.log
+extract_us.log
+extract_run.log
+failed_etfs.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Local
+*.local
+
+# OMC autopilot state (session artifacts)
+.omc/

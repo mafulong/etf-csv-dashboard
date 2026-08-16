@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ETF Dashboard · Home</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<header class="navbar">
+  <div class="brand"><span class="dot"></span>ETF Dashboard</div>
+  <nav>
+    <a href="index.html" class="active">首页</a>
+    <a href="dashboard.html">综合仪表盘</a>
+    <a href="momentum.html">动量轮动</a>
+    <a href="technical.html">技术分析</a>
+    <a href="ai-summary.html">AI 解读</a>
+    <a href="portfolio.html">组合诊断</a>
+  </nav>
+  <div class="meta">46 ETFs · CSV</div>
+</header>
+<main class="container">
+  <div class="page-header">
+    <div>
+      <h1>ETF 数据看板</h1>
+      <div class="subtitle">基于本地 CSV 的静态 ETF 分析工具 — 国内 34 + 美股 12</div>
+    </div>
+  </div>
+  <div class="grid grid-3">
+    <a class="card" href="dashboard.html" style="text-decoration:none;color:inherit">
+      <div class="card-header"><div class="card-title">综合仪表盘 <span class="tag">overview</span></div></div>
+      <div class="muted">全市场概览、收益率排行、波动与回撤</div>
+    </a>
+    <a class="card" href="momentum.html" style="text-decoration:none;color:inherit">
+      <div class="card-header"><div class="card-title">动量轮动 <span class="tag">momentum</span></div></div>
+      <div class="muted">多窗口涨幅排行 + 类别对比 + 趋势确认信号</div>
+    </a>
+    <a class="card" href="technical.html" style="text-decoration:none;color:inherit">
+      <div class="card-header"><div class="card-title">技术分析 <span class="tag">technical</span></div></div>
+      <div class="muted">MA / Bollinger / 成交量 — 单只 ETF 深度分析</div>
+    </a>
+  </div>
+</main>
+</body>
+</html>

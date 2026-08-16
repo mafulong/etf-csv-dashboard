@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ETF Dashboard · 组合诊断</title>
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="brand"><span class="dot"></span> ETF Dashboard</div>
+    <nav>
+      <a href="index.html">首页</a>
+      <a href="dashboard.html">综合仪表盘</a>
+      <a href="momentum.html">动量轮动</a>
+      <a href="technical.html">技术分析</a>
+      <a href="ai-summary.html">AI 解读</a>
+      <a href="portfolio.html" class="active">组合诊断</a>
+    </nav>
+    <div class="meta" id="nav-meta">--</div>
+  </header>
+
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>组合诊断</h1>
+        <div class="subtitle">本地计算 · 市值 / 收益 / 回撤 / 行业暴露 / 与沪深 300 对比</div>
+      </div>
+      <div class="row gap-8">
+        <button class="btn ghost" id="btn-load">加载组合</button>
+        <button class="btn primary" id="btn-save">保存组合</button>
+        <button class="btn danger" id="btn-clear">清空</button>
+      </div>
+    </div>
+
+    <!-- Holdings input -->
+    <div class="card mb-16">
+      <div class="card-header">
+        <div class="card-title">持仓输入</div>
+        <span class="tag" id="row-count">0 行</span>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="tbl portfolio-table">
+          <thead>
+            <tr>
+              <th style="width:120px;">代码</th>
+              <th style="width:200px;">名称</th>
+              <th class="num" style="width:120px;">数量</th>
+              <th class="num" style="width:120px;">成本价</th>
+              <th class="num">当前价</th>
+              <th class="num">市值</th>
+              <th style="width:60px;"></th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <div class="row mt-8 gap-8">
+        <button class="btn ghost" id="btn-add">+ 增加一行</button>
+        <span class="dim" id="hint">代码输入后自动补全名称</span>
+      </div>
+    </div>
+
+    <!-- Diagnostics -->
+    <div id="diag-body">
+      <div class="empty">添加持仓后查看诊断结果</div>
+    </div>
+  </main>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/load.js"></script>
+  <script>
+    (() => {
+      const STORAGE_KEY = 'etf-portfolio-v1';
+      const navMeta = document.getElementById('nav-meta');
+      const rowsEl = document.getElementById('rows');
+      const rowCount = document.getElementById('row-count');
+      const diagBody = document.getElementById('diag-body');
+      const hint = document.getElementById('hint');
+
+      /** @type {{code:string,shares:string,cost:string}[]} */
+      let holdings = [];
+      /** Map<code, {rows, name, category}> cache */
+      const cache = new Map();
+      let benchmarkRows = null; // 沪深300
+      let allSummary = [];
+
+      const lookup = (code) => {
+        if (!code) return null;
+        const m = allSummary.find((s) => s.code === code);
+        return m || null;
+      };
+
+      function addRow(data = {}) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input class="code" type="text" placeholder="如 510300" value="${data.code || ''}" /></td>
+          <td><input class="name" type="text" placeholder="自动补全" value="${data.name || ''}" readonly /></td>
+          <td class="num"><input class="shares" type="number" min="0" step="100" placeholder="0" value="${data.shares || ''}" /></td>
+          <td class="num"><input class="cost" type="number" min="0" step="0.001" placeholder="可选" value="${data.cost || ''}" /></td>
+          <td class="num price">--</td>
+          <td class="num value">--</td>
+          <td class="center"><button class="btn ghost del" title="删除">×</button></td>
+        `;
+        const codeInput = tr.querySelector('.code');
+        const nameInput = tr.querySelector('.name');
+        const sharesInput = tr.querySelector('.shares');
+        const costInput = tr.querySelector('.cost');
+        const delBtn = tr.querySelector('.del');
+
+        codeInput.addEventListener('change', () => {
+          const c = codeInput.value.trim();
+          const m = lookup(c);
+          nameInput.value = m ? m.name : '';
+          if (m) hint.textContent = `已识别 ${m.name}(${m.category})`;
+          else if (c) hint.textContent = `未找到 ETF: ${c}`;
+          recalc();
+        });
+        sharesInput.addEventListener('input', recalc);
+        costInput.addEventListener('input', recalc);
+        delBtn.addEventListener('click', () => {
+          tr.remove();
+          syncFromDom();
+          recalc();
+        });
+        rowsEl.appendChild(tr);
+        syncFromDom();
+      }
+
+      function syncFromDom() {
+        holdings = [...rowsEl.querySelectorAll('tr')].map((tr) => ({
+          code: tr.querySelector('.code').value.trim(),
+          shares: tr.querySelector('.shares').value,
+          cost: tr.querySelector('.cost').value,
+        }));
+        rowCount.textContent = `${holdings.length} 行`;
+      }
+
+      async function ensureLoaded(code) {
+        if (cache.has(code)) return cache.get(code);
+        const m = lookup(code);
+        if (!m) return null;
+        const series = await ETF.byCode(code);
+        cache.set(code, series);
+        return series;
+      }
+
+      async function recalc() {
+        syncFromDom();
+        const valid = holdings.filter((h) => h.code && lookup(h.code));
+        if (!valid.length) {
+          diagBody.innerHTML = '<div class="empty">添加持仓后查看诊断结果</div>';
+          return;
+        }
+
+        // Load all rows + benchmark
+        if (!benchmarkRows) {
+          try { benchmarkRows = await ETF.byCode('510300'); } catch (_) {}
+        }
+        const loaded = await Promise.all(valid.map((h) => ensureLoaded(h.code)));
+
+        // Per-row metrics
+        const enriched = valid.map((h, i) => {
+          const series = loaded[i];
+          const closes = series.rows.map((r) => r.close);
+          const last = closes[closes.length - 1];
+          const shares = parseFloat(h.shares) || 0;
+          const cost = parseFloat(h.cost) || 0;
+          const week = closes.length > 6 ? last / closes[closes.length - 6] - 1 : null;
+          const month = closes.length > 21 ? last / closes[closes.length - 21] - 1 : null;
+          const mdd = ETF.utils.maxDrawdown(closes);
+          const marketValue = last * shares;
+          const costValue = (cost || last) * shares;
+          return {
+            code: h.code,
+            name: series.name,
+            category: series.category,
+            shares,
+            cost,
+            last,
+            week,
+            month,
+            mdd,
+            marketValue,
+            profit: cost ? (last - cost) * shares : null,
+          };
+        });
+
+        // Update rows with live price/value
+        const trs = rowsEl.querySelectorAll('tr');
+        enriched.forEach((e, idx) => {
+          const tr = trs[idx];
+          if (!tr) return;
+          tr.querySelector('.price').textContent = ETF.utils.price(e.last);
+          tr.querySelector('.value').textContent =
+            ETF.utils.num(e.marketValue, 0);
+        });
+
+        // Aggregate metrics
+        const totalValue = enriched.reduce((a, x) => a + x.marketValue, 0);
+        const totalCost = enriched.reduce((a, x) => a + ((x.cost || x.last) * x.shares), 0);
+
+        // Portfolio 1-week and 1-month return = value-weighted
+        const weights = enriched.map((e) => totalValue > 0 ? e.marketValue / totalValue : 0);
+        const portWeek = weights.reduce((a, w, i) => a + w * (enriched[i].week || 0), 0);
+        const portMonth = weights.reduce((a, w, i) => a + w * (enriched[i].month || 0), 0);
+
+        // Portfolio max drawdown: build aligned daily value series, then DD
+        const portMdd = computePortfolioDD(enriched, totalValue);
+
+        // vs 沪深 300: 1-month correlation + alpha (simplified: r_p - r_b)
+        let corr = null, beta = null, alpha = null;
+        if (benchmarkRows && benchmarkRows.rows && benchmarkRows.rows.length > 21) {
+          // Compute daily returns aligned by date for benchmark
+          const benchByDate = new Map(benchmarkRows.rows.map((r) => [r.date, r.close]));
+          const portDailyR = [];
+          const benchDailyR = [];
+          // Take the last 21 trading days from any one ETF as anchor dates
+          const anchor = enriched[0] && (await ensureLoaded(enriched[0].code)).rows.slice(-22);
+          if (anchor && anchor.length === 22) {
+            for (let i = 1; i < anchor.length; i++) {
+              const date = anchor[i].date;
+              // portfolio daily return on this date = sum_i w_i * r_i,t
+              let rPort = 0, rBench = null;
+              for (let j = 0; j < enriched.length; j++) {
+                const s = enriched[j];
+                const w = weights[j];
+                const rows = (j === 0 ? anchor : (await ensureLoaded(s.code)).rows);
+                const idx = rows.findIndex((r) => r.date === date);
+                const prev = idx > 0 ? rows[idx - 1] : null;
+                if (idx < 0 || !prev) { rPort = NaN; break; }
+                rPort += w * (rows[idx].close / prev.close - 1);
+              }
+              const b = benchByDate.get(date);
+              const bPrevDate = findPrevDate(benchByDate, date);
+              const bPrev = bPrevDate ? benchByDate.get(bPrevDate) : null;
+              if (b && bPrev) rBench = b / bPrev - 1;
+              if (isFinite(rPort) && rBench != null) {
+                portDailyR.push(rPort);
+                benchDailyR.push(rBench);
+              }
+            }
+          }
+          if (portDailyR.length >= 5) {
+            corr = ETF.utils.corr(portDailyR, benchDailyR);
+            beta = ETF.utils.beta(portDailyR, benchDailyR);
+            // Alpha = annualized (port - beta*bench) over the window
+            const portTot = portDailyR.reduce((a, x) => a * (1 + x), 1) - 1;
+            const benchTot = benchDailyR.reduce((a, x) => a * (1 + x), 1) - 1;
+            alpha = portTot - beta * benchTot;
+          }
+        }
+
+        // Render diagnostics
+        renderDiagnostics({
+          enriched, totalValue, totalCost, portWeek, portMonth, portMdd,
+          corr, beta, alpha,
+        });
+      }
+
+      function findPrevDate(map, date) {
+        // linear scan from one day earlier
+        const d = new Date(date);
+        for (let i = 1; i < 10; i++) {
+          d.setDate(d.getDate() - 1);
+          const s = d.toISOString().slice(0, 10);
+          if (map.has(s)) return s;
+        }
+        return null;
+      }
+
+      function computePortfolioDD(enriched, totalValue) {
+        // Reconstruct a daily portfolio value series using last N days
+        const n = Math.min(...enriched.map((e) => e.shares > 0 ? 60 : 0)) || 60;
+        // Use the closes of first ETF as anchor dates
+        const firstSeries = enriched[0] ? (cache.get(enriched[0].code) || { rows: [] }) : null;
+        if (!firstSeries || !firstSeries.rows.length) return 0;
+        const slice = firstSeries.rows.slice(-n);
+        const valueSeries = [];
+        for (let i = 0; i < slice.length; i++) {
+          let v = 0;
+          for (const e of enriched) {
+            const s = cache.get(e.code);
+            if (!s) continue;
+            const c = s.rows[i + (s.rows.length - slice.length)]?.close;
+            if (c != null) v += c * e.shares;
+          }
+          if (v > 0) valueSeries.push(v);
+        }
+        return ETF.utils.maxDrawdown(valueSeries);
+      }
+
+      function renderDiagnostics(d) {
+        const { enriched, totalValue, totalCost, portWeek, portMonth, portMdd,
+                corr, beta, alpha } = d;
+
+        diagBody.innerHTML = '';
+
+        // Metric cards
+        const grid = document.createElement('div');
+        grid.className = 'grid grid-4 mb-16';
+        const profit = totalCost > 0 ? totalValue - totalCost : null;
+        const profitClass = profit == null ? '' : (profit >= 0 ? 'pos' : 'neg');
+        grid.innerHTML = `
+          <div class="metric">
+            <div class="label">总市值</div>
+            <div class="value">${ETF.utils.num(totalValue, 0)}</div>
+            <div class="sub">${enriched.length} 只持仓</div>
+          </div>
+          <div class="metric ${ETF.utils.signClass(portWeek)}">
+            <div class="label">近 1 周收益</div>
+            <div class="value">${ETF.utils.pct(portWeek)}</div>
+            <div class="sub">加权</div>
+          </div>
+          <div class="metric ${ETF.utils.signClass(portMonth)}">
+            <div class="label">近 1 月收益</div>
+            <div class="value">${ETF.utils.pct(portMonth)}</div>
+            <div class="sub">加权</div>
+          </div>
+          <div class="metric ${profitClass}">
+            <div class="label">最大回撤 / 浮盈</div>
+            <div class="value">${ETF.utils.pct(portMdd)}</div>
+            <div class="sub">${profit != null ? '盈亏 ' + ETF.utils.num(profit, 0) : '无成本数据'}</div>
+          </div>
+        `;
+        diagBody.appendChild(grid);
+
+        // Two-column: pie chart + holdings table
+        const lower = document.createElement('div');
+        lower.className = 'grid grid-2';
+        diagBody.appendChild(lower);
+
+        // Industry exposure card
+        const catCard = document.createElement('div');
+        catCard.className = 'card';
+        catCard.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">行业暴露</div>
+            <span class="tag">按市值</span>
+          </div>
+          <div class="chart-wrap"><canvas id="pie" width="320" height="320"></canvas></div>
+        `;
+        lower.appendChild(catCard);
+
+        // Holdings detail
+        const detail = document.createElement('div');
+        detail.className = 'card';
+        detail.innerHTML = `
+          <div class="card-header">
+            <div class="card-title">持仓明细</div>
+            <span class="tag">${enriched.length} 只</span>
+          </div>
+          <div style="overflow-x:auto;max-height:360px;overflow-y:auto;">
+            <table class="tbl">
+              <thead><tr>
+                <th>代码</th><th>名称</th><th>类别</th>
+                <th class="num">数量</th>
+                <th class="num">当前价</th>
+                <th class="num">市值</th>
+                <th class="num">1 周</th>
+                <th class="num">1 月</th>
+              </tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        `;
+        const tb = detail.querySelector('tbody');
+        enriched.forEach((e) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td class="mono">${e.code}</td>
+            <td>${e.name}</td>
+            <td><span class="pill cat-${e.category}">${e.category}</span></td>
+            <td class="num">${ETF.utils.num(e.shares, 0)}</td>
+            <td class="num">${ETF.utils.price(e.last)}</td>
+            <td class="num">${ETF.utils.num(e.marketValue, 0)}</td>
+            <td class="num ${e.week != null ? ETF.utils.signClass(e.week) : ''}">${e.week != null ? ETF.utils.pct(e.week) : '--'}</td>
+            <td class="num ${e.month != null ? ETF.utils.signClass(e.month) : ''}">${e.month != null ? ETF.utils.pct(e.month) : '--'}</td>
+          `;
+          tb.appendChild(tr);
+        });
+        lower.appendChild(detail);
+
+        // Draw pie chart
+        drawPie(enriched, totalValue);
+
+        // Benchmark comparison
+        if (corr != null) {
+          const bench = document.createElement('div');
+          bench.className = 'card mt-16';
+          bench.innerHTML = `
+            <div class="card-header">
+              <div class="card-title">vs 沪深 300</div>
+              <span class="tag">近 1 月</span>
+            </div>
+            <div class="grid grid-3 mt-8">
+              <div class="metric">
+                <div class="label">相关系数</div>
+                <div class="value">${ETF.utils.num(corr, 3)}</div>
+                <div class="sub">日收益</div>
+              </div>
+              <div class="metric">
+                <div class="label">Beta</div>
+                <div class="value">${ETF.utils.num(beta, 3)}</div>
+                <div class="sub">对基准</div>
+              </div>
+              <div class="metric ${ETF.utils.signClass(alpha)}">
+                <div class="label">Alpha</div>
+                <div class="value">${ETF.utils.pct(alpha)}</div>
+                <div class="sub">窗口期</div>
+              </div>
+            </div>
+          `;
+          diagBody.appendChild(bench);
+        }
+      }
+
+      function drawPie(enriched, total) {
+        const canvas = document.getElementById('pie');
+        if (!canvas || !canvas.getContext) return;
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        ctx.clearRect(0, 0, W, H);
+
+        const byCat = new Map();
+        for (const e of enriched) {
+          byCat.set(e.category, (byCat.get(e.category) || 0) + e.marketValue);
+        }
+        const data = [...byCat.entries()]
+          .filter(([, v]) => v > 0)
+          .sort((a, b) => b[1] - a[1]);
+
+        const palette = {
+          '国内宽基': '#2f81f7',
+          '全球': '#a371f7',
+          '行业': '#39c5cf',
+          '美股': '#d29922',
+          '指数': '#f85149',
+        };
+        const fallback = ['#2f81f7', '#a371f7', '#39c5cf', '#d29922', '#3fb950', '#f85149'];
+
+        const cx = W / 2, cy = H / 2, r = Math.min(W, H) / 2 - 8;
+        let start = -Math.PI / 2;
+        data.forEach(([cat, val], i) => {
+          const angle = (val / total) * Math.PI * 2;
+          const color = palette[cat] || fallback[i % fallback.length];
+          ctx.beginPath();
+          ctx.moveTo(cx, cy);
+          ctx.arc(cx, cy, r, start, start + angle);
+          ctx.closePath();
+          ctx.fillStyle = color;
+          ctx.fill();
+          ctx.strokeStyle = '#0e1116';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          start += angle;
+        });
+
+        // Center label
+        ctx.fillStyle = '#e6edf3';
+        ctx.font = '600 16px -apple-system, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('行业', cx, cy - 4);
+        ctx.font = '12px -apple-system, sans-serif';
+        ctx.fillStyle = '#8b949e';
+        ctx.fillText('暴露', cx, cy + 14);
+
+        // Legend
+        const lx = 12, ly = H - data.length * 18 - 12;
+        ctx.font = '12px -apple-system, sans-serif';
+        ctx.textAlign = 'left';
+        data.forEach(([cat, val], i) => {
+          const color = palette[cat] || fallback[i % fallback.length];
+          const y = ly + i * 18;
+          ctx.fillStyle = color;
+          ctx.fillRect(lx, y, 10, 10);
+          ctx.fillStyle = '#e6edf3';
+          ctx.fillText(`${cat} ${(val / total * 100).toFixed(1)}%`, lx + 16, y + 9);
+        });
+      }
+
+      // Storage
+      function save() {
+        syncFromDom();
+        ETF.utils.lsSet(STORAGE_KEY, holdings);
+        hint.textContent = `已保存 ${holdings.length} 行到 localStorage`;
+      }
+      function load() {
+        const data = ETF.utils.lsGet(STORAGE_KEY, []);
+        rowsEl.innerHTML = '';
+        if (!data.length) {
+          addRow();
+          hint.textContent = 'localStorage 为空,已添加空行';
+          return;
+        }
+        data.forEach((d) => addRow(d));
+        hint.textContent = `已加载 ${data.length} 行`;
+        recalc();
+      }
+      function clearAll() {
+        rowsEl.innerHTML = '';
+        addRow();
+        ETF.utils.lsRemove(STORAGE_KEY);
+        hint.textContent = '已清空';
+      }
+
+      // Wire buttons
+      document.getElementById('btn-add').addEventListener('click', () => addRow());
+      document.getElementById('btn-save').addEventListener('click', save);
+      document.getElementById('btn-load').addEventListener('click', load);
+      document.getElementById('btn-clear').addEventListener('click', clearAll);
+
+      // Init
+      (async () => {
+        await ETF.ready;
+        allSummary = ETF.summary;
+        navMeta.textContent = ETF.codes().length + ' 只 · ' + ETF.lastDate;
+        // Start with one empty row
+        if (!rowsEl.children.length) addRow();
+      })();
+    })();
+  </script>
+</body>
+</html>

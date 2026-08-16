@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ETF Dashboard · 综合仪表盘</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<header class="navbar">
+  <div class="brand"><span class="dot"></span>ETF Dashboard</div>
+  <nav>
+    <a href="index.html">首页</a>
+    <a href="dashboard.html" class="active">综合仪表盘</a>
+    <a href="momentum.html">动量轮动</a>
+    <a href="technical.html">技术分析</a>
+    <a href="ai-summary.html">AI 解读</a>
+    <a href="portfolio.html">组合诊断</a>
+  </nav>
+  <div class="meta" id="meta-count">46 ETFs · CSV</div>
+</header>
+
+<main class="container">
+  <div class="page-header">
+    <div>
+      <h1>综合仪表盘</h1>
+      <div class="subtitle">全市场概览 — 综合指标与排行</div>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading" class="loading">加载 46 个 ETF 数据中…</div>
+
+  <div id="content" style="display:none">
+    <!-- Top metric row -->
+    <div class="grid grid-4 mb-16" id="metric-row"></div>
+
+    <!-- Filter bar -->
+    <div class="filterbar mb-16">
+      <span class="muted small">类别:</span>
+      <select id="category-filter" class="search" style="min-width:160px">
+        <option value="all">全部</option>
+        <option value="国内宽基">国内宽基</option>
+        <option value="全球">全球</option>
+        <option value="行业">行业</option>
+        <option value="美股">美股</option>
+      </select>
+      <span class="muted small dim" id="row-count-info" style="margin-left:auto">—</span>
+    </div>
+
+    <!-- Main table + sidebar -->
+    <div class="grid" style="grid-template-columns: 1fr 280px; gap:16px">
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">全 ETF 列表 <span class="tag">46</span></div>
+            <span class="muted small">点击列头排序</span>
+          </div>
+          <div class="table-wrap" style="max-height:640px;overflow-y:auto">
+            <table class="tbl">
+              <thead id="table-head">
+                <tr>
+                  <th data-sort="code">代码</th>
+                  <th data-sort="name">名称</th>
+                  <th data-sort="category">类别</th>
+                  <th class="num" data-sort="last">收盘</th>
+                  <th class="num" data-sort="day">今日</th>
+                  <th class="num" data-sort="week">近 1 周</th>
+                  <th class="num" data-sort="month">近 1 月</th>
+                  <th class="num" data-sort="m3">近 3 月</th>
+                  <th class="num" data-sort="m6">近 6 月</th>
+                  <th class="num" data-sort="m12">近 12 月</th>
+                  <th class="num" data-sort="ma20dev">距 MA20</th>
+                </tr>
+              </thead>
+              <tbody id="table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Top 5 <span class="tag">今日涨幅</span></div>
+          </div>
+          <ul class="bullets" id="top5-list"></ul>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">Bottom 5 <span class="tag">今日跌幅</span></div>
+          </div>
+          <ul class="bullets" id="bot5-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer muted small">
+  数据基于本地 CSV (46 ETFs · 252 trading days) — 仅供研究,不构成投资建议
+</footer>
+
+<script src="assets/js/load.js"></script>
+<script src="assets/js/utils.js"></script>
+<script src="assets/js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ETF Dashboard · 技术分析</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<header class="navbar">
+  <div class="brand"><span class="dot"></span>ETF Dashboard</div>
+  <nav>
+    <a href="index.html">首页</a>
+    <a href="dashboard.html">综合仪表盘</a>
+    <a href="momentum.html">动量轮动</a>
+    <a href="technical.html" class="active">技术分析</a>
+    <a href="ai-summary.html">AI 解读</a>
+    <a href="portfolio.html">组合诊断</a>
+  </nav>
+  <div class="meta" id="meta-count">46 ETFs</div>
+</header>
+
+<main class="container">
+  <div class="page-header">
+    <div>
+      <h1>技术分析</h1>
+      <div class="subtitle">单只 ETF 深度 — MA / Bollinger / 成交量</div>
+    </div>
+    <div class="row gap-8">
+      <select id="etf-select" class="search" style="min-width:240px"></select>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading" class="loading">加载 ETF 元数据中…</div>
+
+  <div id="content" style="display:none">
+    <!-- Top metric row -->
+    <div class="grid grid-4 mb-16" id="metric-row"></div>
+
+    <div class="grid" style="grid-template-columns: 1fr 320px; gap:16px">
+      <!-- Left: main chart + volume + table -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              价格走势 <span class="tag" id="chart-tag">—</span>
+            </div>
+            <div class="row gap-8">
+              <span class="muted small"><span style="display:inline-block;width:10px;height:2px;background:#f59e0b;vertical-align:middle;margin-right:4px"></span>收盘</span>
+              <span class="muted small"><span style="display:inline-block;width:10px;height:2px;background:#3b82f6;vertical-align:middle;margin-right:4px"></span>MA20</span>
+              <span class="muted small"><span style="display:inline-block;width:10px;height:2px;background:#8b5cf6;vertical-align:middle;margin-right:4px"></span>MA60</span>
+              <span class="muted small"><span style="display:inline-block;width:10px;height:2px;background:#94a3b8;vertical-align:middle;margin-right:4px;border-top:1px dashed #94a3b8"></span>布林带</span>
+            </div>
+          </div>
+          <div style="position:relative;height:380px">
+            <canvas id="price-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">成交量</div>
+          </div>
+          <div style="position:relative;height:140px">
+            <canvas id="volume-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">近 30 日指标</div>
+          </div>
+          <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>日期</th>
+                  <th class="num">收盘</th>
+                  <th class="num">MA20</th>
+                  <th class="num">MA60</th>
+                  <th class="num">布林上轨</th>
+                  <th class="num">布林下轨</th>
+                  <th class="num">位置%</th>
+                </tr>
+              </thead>
+              <tbody id="indicator-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right sidebar: market overview -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">全市场技术概览 <span class="tag">overview</span></div>
+          </div>
+          <div class="muted small mb-16">各类别 MA20 平均偏离%</div>
+          <ul class="bullets" id="market-overview"></ul>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">超买 / 超卖 <span class="tag">signal</span></div>
+          </div>
+          <div class="muted small mb-16">MA20 偏离 &gt; +5% 或 &lt; -5% 的 ETF</div>
+          <ul class="bullets" id="extreme-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer muted small">
+  数据基于本地 CSV (46 ETFs · 252 trading days) — 仅供研究,不构成投资建议
+</footer>
+
+<!-- CDN libraries -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- Shared -->
+<script src="assets/js/load.js"></script>
+<script src="assets/js/utils.js"></script>
+<!-- Page -->
+<script src="assets/js/technical.js"></script>
+</body>
+</html>

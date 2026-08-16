@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ETF Dashboard · 动量轮动</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+<header class="navbar">
+  <div class="brand"><span class="dot"></span>ETF Dashboard</div>
+  <nav>
+    <a href="index.html">首页</a>
+    <a href="dashboard.html">综合仪表盘</a>
+    <a href="momentum.html" class="active">动量轮动</a>
+    <a href="technical.html">技术分析</a>
+    <a href="ai-summary.html">AI 解读</a>
+    <a href="portfolio.html">组合诊断</a>
+  </nav>
+  <div class="meta" id="meta-count">46 ETFs</div>
+</header>
+
+<main class="container">
+  <div class="page-header">
+    <div>
+      <h1>动量轮动</h1>
+      <div class="subtitle">按时间窗口排序 — 找出当下最强的 ETF 类别</div>
+    </div>
+  </div>
+
+  <!-- Time-window tab group -->
+  <div class="filterbar">
+    <span class="muted small">窗口:</span>
+    <div class="tab-group" id="window-tabs">
+      <button data-window="1M" class="active">近 1 月</button>
+      <button data-window="3M">近 3 月</button>
+      <button data-window="6M">近 6 月</button>
+      <button data-window="12M">近 12 月</button>
+    </div>
+    <span class="muted small">类别:</span>
+    <div class="tab-group" id="cat-filter">
+      <button data-cat="all" class="active">全部</button>
+      <button data-cat="国内宽基">国内宽基</button>
+      <button data-cat="全球">全球</button>
+      <button data-cat="行业">行业</button>
+      <button data-cat="美股">美股</button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading" class="loading">加载 46 个 ETF 数据中…</div>
+
+  <div id="content" style="display:none">
+    <!-- Summary metric row -->
+    <div class="grid grid-4 mb-16" id="metric-row"></div>
+
+    <div class="grid grid-2">
+      <!-- Left: main ranking + category chart -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">动量排行 <span class="tag" id="window-tag">近 1 月</span></div>
+            <span class="muted small" id="ranking-meta"></span>
+          </div>
+          <div class="table-wrap" style="max-height:560px;overflow-y:auto">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th style="width:48px">#</th>
+                  <th>代码</th>
+                  <th>名称</th>
+                  <th>类别</th>
+                  <th class="num">该窗口涨幅</th>
+                  <th class="num">对比上一窗口</th>
+                </tr>
+              </thead>
+              <tbody id="ranking-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">类别平均涨幅对比 <span class="tag">4 windows</span></div>
+          </div>
+          <div class="chart-wrap" style="padding:8px 0">
+            <canvas id="category-chart" height="280"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: rotation signal + category leaders -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">轮动信号 <span class="tag">rotation</span></div>
+          </div>
+          <div class="muted small mb-16" id="signal-summary">识别在多窗口中保持强势的 ETF</div>
+          <ul class="bullets" id="signal-list"></ul>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">当前 Top 5 <span class="tag" id="top5-tag">1M</span></div>
+          </div>
+          <ul class="bullets" id="top5-list"></ul>
+        </div>
+
+        <div class="card mt-16">
+          <div class="card-header">
+            <div class="card-title">当前 Bottom 5 <span class="tag" id="bot5-tag">1M</span></div>
+          </div>
+          <ul class="bullets" id="bot5-list"></ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="site-footer muted small">
+  数据基于本地 CSV (46 ETFs · 252 trading days) — 仅供研究,不构成投资建议
+</footer>
+
+<!-- CDN libraries -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<!-- Shared -->
+<script src="assets/js/load.js"></script>
+<script src="assets/js/utils.js"></script>
+<!-- Page -->
+<script src="assets/js/momentum.js"></script>
+</body>
+</html>
