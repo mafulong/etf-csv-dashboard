@@ -30,6 +30,8 @@
 .heatmap-tooltip .t-val.pos { color:var(--green); }
 .heatmap-tooltip .t-val.neg { color:var(--red); }
 .heatmap-tooltip .t-hint { margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--text-dim); font-size:11px; }
+.heatmap-tooltip .t-spark { display:block; margin-top:6px; padding-top:4px; border-top:1px dashed var(--border); }
+.heatmap-tooltip .t-spark .lbl { font-size:10px; color:var(--text-dim); margin-bottom:2px; }
 /* 图例: 9 格横向 */
 .heatmap-legend {
   display:grid; grid-template-columns:repeat(9,1fr); gap:2px;
