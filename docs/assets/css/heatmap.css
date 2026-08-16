@@ -1,0 +1,44 @@
+/* ETF 行业热力图 — 页面专属样式 */
+:root {
+  /* 9 档色阶: 深红 → 灰 → 深绿 (CSS 变量备用, 主色由 JS 直接用) */
+  --heat-neg-4:#7f1d1d; --heat-neg-3:#b91c1c; --heat-neg-2:#dc2626;
+  --heat-neg-1:#ef4444; --heat-zero:#4b5563;
+  --heat-pos-1:#4ade80; --heat-pos-2:#22c55e; --heat-pos-3:#16a34a; --heat-pos-4:#166534;
+}
+/* Toolbar */
+.heatmap-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.heatmap-toolbar select { min-width:140px; }
+.heatmap-toolbar .snapshot-date { color:var(--text-mute); font-size:12px; font-family:var(--mono); margin-right:4px; }
+/* 主画布容器 */
+.heatmap-wrap {
+  position:relative; width:100%; aspect-ratio:12/7;
+  background:var(--bg-2); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;
+}
+.heatmap-wrap canvas { display:block; width:100%; height:100%; cursor:pointer; }
+/* Tooltip */
+.heatmap-tooltip {
+  position:fixed; z-index:1000; pointer-events:none;
+  background:rgba(14,17,22,0.96); color:var(--text);
+  border:1px solid var(--border-2); border-radius:var(--radius);
+  padding:10px 12px; font-size:12px; line-height:1.6;
+  box-shadow:0 8px 24px rgba(0,0,0,0.5); max-width:260px; backdrop-filter:blur(4px);
+}
+.heatmap-tooltip .t-row { display:flex; justify-content:space-between; gap:16px; }
+.heatmap-tooltip .t-row.t-code { font-weight:600; font-family:var(--mono); margin-bottom:4px; }
+.heatmap-tooltip .t-label { color:var(--text-mute); }
+.heatmap-tooltip .t-val { font-family:var(--mono); }
+.heatmap-tooltip .t-val.pos { color:var(--green); }
+.heatmap-tooltip .t-val.neg { color:var(--red); }
+.heatmap-tooltip .t-hint { margin-top:6px; padding-top:6px; border-top:1px solid var(--border); color:var(--text-dim); font-size:11px; }
+/* 图例: 9 格横向 */
+.heatmap-legend {
+  display:grid; grid-template-columns:repeat(9,1fr); gap:2px;
+  margin-top:12px; font-family:var(--mono); font-size:11px; color:var(--text-mute);
+}
+.heatmap-legend .cell { display:flex; align-items:center; justify-content:center; height:28px; border-radius:4px; }
+.heatmap-legend .neg-4 { background:var(--heat-neg-4); } .heatmap-legend .neg-3 { background:var(--heat-neg-3); }
+.heatmap-legend .neg-2 { background:var(--heat-neg-2); } .heatmap-legend .neg-1 { background:var(--heat-neg-1); }
+.heatmap-legend .zero  { background:var(--heat-zero); }
+.heatmap-legend .pos-1 { background:var(--heat-pos-1); color:var(--bg); }
+.heatmap-legend .pos-2 { background:var(--heat-pos-2); color:var(--bg); }
+.heatmap-legend .pos-3 { background:var(--heat-pos-3); } .heatmap-legend .pos-4 { background:var(--heat-pos-4); }

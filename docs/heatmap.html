@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ETF Dashboard · 行业热力图</title>
+<link rel="stylesheet" href="assets/css/style.css" />
+<link rel="stylesheet" href="assets/css/heatmap.css" />
+</head>
+<body>
+<header class="navbar">
+  <div class="brand"><span class="dot"></span>ETF Dashboard</div>
+  <nav>
+    <a href="index.html">首页</a>
+    <a href="dashboard.html">综合仪表盘</a>
+    <a href="heatmap.html" class="active">热力图</a>
+    <a href="momentum.html">动量轮动</a>
+    <a href="technical.html">技术分析</a>
+    <a href="ai-summary.html">AI 解读</a>
+    <a href="portfolio.html">组合诊断</a>
+  </nav>
+  <div class="meta" id="meta-count">46 ETFs · CSV</div>
+</header>
+
+<main class="container">
+  <div class="page-header">
+    <div>
+      <h1>行业热力图</h1>
+      <div class="subtitle">借鉴 52etf 大盘云图 — 一眼看清 ETF 行业强弱</div>
+    </div>
+    <!-- Toolbar -->
+    <div class="heatmap-toolbar">
+      <button class="btn ghost" id="btn-back" style="display:none">← 返回类别视图</button>
+      <span class="muted small">时间快照:</span>
+      <select id="snapshot-select" class="search">
+        <option value="0">当前</option>
+        <option value="-5">-1 周</option>
+        <option value="-21">-1 月</option>
+        <option value="-63">-3 月</option>
+        <option value="-126">-6 月</option>
+      </select>
+      <span class="snapshot-date" id="snapshot-date">快照: —</span>
+      <button class="btn" id="btn-screenshot">📸 保存为图片</button>
+      <button class="btn ghost" id="btn-fullscreen">⛶ 全屏</button>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div id="loading" class="loading">加载 46 个 ETF 数据中…</div>
+
+  <!-- Heatmap container -->
+  <div class="heatmap-wrap" id="heatmap-wrap" style="display:none">
+    <canvas id="treemap" width="1200" height="700"></canvas>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="heatmap-tooltip" id="tooltip" style="display:none"></div>
+
+  <!-- Legend -->
+  <div class="heatmap-legend" id="legend" style="display:none">
+    <div class="cell neg-4">-4%</div>
+    <div class="cell neg-3">-3%</div>
+    <div class="cell neg-2">-2%</div>
+    <div class="cell neg-1">-1%</div>
+    <div class="cell zero">0%</div>
+    <div class="cell pos-1">+1%</div>
+    <div class="cell pos-2">+2%</div>
+    <div class="cell pos-3">+3%</div>
+    <div class="cell pos-4">+4%</div>
+  </div>
+</main>
+
+<footer class="site-footer muted small">
+  数据基于本地 CSV (46 ETFs · 241 trading days) — 仅供研究,不构成投资建议
+</footer>
+
+<!-- Screenshot lib (CDN, ~50KB) -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<!-- Shared -->
+<script src="assets/js/load.js"></script>
+<script src="assets/js/utils.js"></script>
+<!-- Page -->
+<script src="assets/js/heatmap.js"></script>
+</body>
+</html>
