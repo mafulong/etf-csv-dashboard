@@ -141,5 +141,21 @@
 
   state.ready = loadSummary();
 
-  global.ETF = Object.assign(global.ETF || {}, api);
+  // IMPORTANT: Object.assign(target, src) reads getters on `src` at the moment
+  // of assignment — if we used it on `api`, `window.ETF.summary` would become a
+  // permanent [] snapshot (state.summary is empty until the CSV fetch resolves).
+  // Use defineProperty for the getters so they remain live, and copy the
+  // methods (which read `state` from closure, so they don't need live binding).
+  const target = global.ETF || {};
+  Object.defineProperties(target, {
+    ready:    { get() { return state.ready; },    enumerable: true, configurable: true },
+    summary:  { get() { return state.summary; },  enumerable: true, configurable: true },
+    lastDate: { get() { return state.lastDate; }, enumerable: true, configurable: true },
+    codes:        { value: api.codes,        enumerable: true, configurable: true, writable: true },
+    categories:   { value: api.categories,   enumerable: true, configurable: true, writable: true },
+    byCode:       { value: api.byCode,       enumerable: true, configurable: true, writable: true },
+    all:          { value: api.all,          enumerable: true, configurable: true, writable: true },
+    refresh:      { value: api.refresh,      enumerable: true, configurable: true, writable: true },
+  });
+  global.ETF = target;
 })(window);
