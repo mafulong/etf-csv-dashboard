@@ -232,6 +232,7 @@
     rows.forEach(function (r) {
       var tr = document.createElement('tr');
       tr.innerHTML =
+        '<td class="kline-col">' + sinaKlineCell(r.code) + '</td>' +
         '<td class="mono">' + r.code + '</td>' +
         '<td>' + escapeHtml(r.name) + '</td>' +
         '<td><span class="pill cat-' + r.category + '">' + r.category + '</span></td>' +
@@ -244,6 +245,30 @@
         '<td class="num ' + signCls(r.m12) + '">' + pct(r.m12) + '</td>' +
         '<td class="num ' + signCls(r.ma20dev) + '">' + pct(r.ma20dev) + '</td>';
       dom.tableBody.appendChild(tr);
+    });
+  }
+
+  // ---- Sina K线缩略图 --------------------------------------------------
+  // Sina K线服务: image.sinajs.cn/newchart/daily/n/{market}{code}.gif
+  // 仅覆盖沪深 ETF(代码首位 5 → sh, 1 → sz); 海外 ETF(VNQ/IWY 等) 返回占位符
+  function sinaMarketPrefix(code) {
+    if (!code) return null;
+    var c = String(code).charAt(0);
+    return c === '5' ? 'sh' : (c === '1' ? 'sz' : null);
+  }
+  function sinaKlineCell(code) {
+    var prefix = sinaMarketPrefix(code);
+    if (!prefix) {
+      return '<span class="kline-na" title="海外 ETF 新浪无 K线">无新浪</span>';
+    }
+    var url = 'https://image.sinajs.cn/newchart/daily/n/' + prefix + code + '.gif';
+    return '<img src="' + url + '" alt="' + escapeAttr(code) + ' K线" loading="lazy" ' +
+           'referrerpolicy="no-referrer" ' +
+           'onerror="this.outerHTML=\'<span class=kline-na>无数据</span>\'">';
+  }
+  function escapeAttr(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c];
     });
   }
 

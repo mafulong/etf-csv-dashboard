@@ -18,6 +18,20 @@
   const $ = (id) => document.getElementById(id);
   const canvas = () => $('treemap');
 
+  // Sina K线 URL helper — 仅沪深 ETF (代码首位 5 → sh, 1 → sz) 有数据
+  function sinaKlineUrl(code) {
+    if (!code) return null;
+    const c = String(code).charAt(0);
+    const prefix = c === '5' ? 'sh' : (c === '1' ? 'sz' : null);
+    if (!prefix) return null;
+    return 'https://image.sinajs.cn/newchart/daily/n/' + prefix + code + '.gif';
+  }
+  function escapeAttr(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    })[c]);
+  }
+
   // 取所有 ETF 共同能提供的最大日期 (即"快照日")
   function pickLastDate(etfs, off) {
     let max = '';
@@ -260,8 +274,14 @@
       html += `<div class="t-row"><span class="t-label">1 周</span><span class="t-val ${sc(it.weekPct)}">${w(it.weekPct)}</span></div>`;
       html += `<div class="t-row"><span class="t-label">1 月</span><span class="t-val ${sc(it.monthPct)}">${w(it.monthPct)}</span></div>`;
       html += `<div class="t-row"><span class="t-label">1 年</span><span class="t-val ${sc(it.yearPct)}">${w(it.yearPct)}</span></div>`;
-      // 单只 ETF sparkline
-      html += sparklineSvg(it.rows, it.idx);
+      // 单只 ETF Sina K线 (优先) / SVG sparkline (海外 ETF fallback)
+      const sinaUrl = sinaKlineUrl(it.code);
+      if (sinaUrl) {
+        html += `<img class="t-kline" src="${sinaUrl}" alt="${it.code} K线" loading="lazy" referrerpolicy="no-referrer" ` +
+                `onerror="this.outerHTML='${escapeAttr(sparklineSvg(it.rows, it.idx))}'">`;
+      } else {
+        html += sparklineSvg(it.rows, it.idx);
+      }
       html += `<div class="t-hint">双击 → 技术分析</div>`;
     }
     tip.innerHTML = html; tip.style.display = 'block';

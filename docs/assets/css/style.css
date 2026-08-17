@@ -231,6 +231,43 @@ a:hover { text-decoration: underline; }
 .tbl .pos { color: var(--green); }
 .tbl .neg { color: var(--red); }
 
+/* ---------- K线缩略图列 ---------- */
+.tbl th.kline-col, .tbl td.kline-col {
+  width: 130px;
+  padding: 4px 6px;
+  text-align: center;
+  vertical-align: middle;
+}
+.tbl td.kline-col img {
+  display: block;
+  width: 120px;
+  height: 80px;
+  border-radius: 3px;
+  background: var(--bg-2);
+  object-fit: contain;
+}
+.tbl td.kline-col .kline-na {
+  display: inline-block;
+  width: 120px;
+  height: 80px;
+  line-height: 80px;
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-2);
+  border: 1px dashed var(--border);
+  border-radius: 3px;
+}
+/* 首页卡片 K线预览 */
+.card .card-kline {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  margin: 10px auto 6px;
+  border-radius: 4px;
+  background: #fff;
+}
+
 /* ---------- Pills / Tags ---------- */
 .pill {
   display: inline-block;
